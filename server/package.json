@@ -1,0 +1,23 @@
+{
+  "name": "qbo-summary-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "refresh": "node -e \"import('./src/services/scheduler.js').then(m=>m.refreshAll()).then(r=>console.log(r))\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
+    "node-cron": "^3.0.3"
+  }
+}

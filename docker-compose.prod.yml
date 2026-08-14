@@ -1,0 +1,50 @@
+# Production stack for qbo-summary.mmcconvert.com
+#
+# This box already runs nginx directly on the host (not in Docker), fronting
+# the other MMC Convert tools (QB-to-Xero, QB-to-Xero-Attachment, etc.) — it
+# owns ports 80/443, so there is no reverse-proxy container here, unlike a
+# from-scratch box. nginx handles TLS and routes qbo-summary.mmcconvert.com
+# to this container's published port; see deploy/nginx/ for that config.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build   # start / update
+#   docker compose -f docker-compose.prod.yml down            # stop
+#   docker compose -f docker-compose.prod.yml logs -f         # watch logs
+#
+# The dev setup (docker-compose.yml, Vite dev server) is untouched and is
+# still what you use locally.
+
+name: qbo-summary
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qbo-summary-app
+    restart: unless-stopped
+    # 4500 was picked clear of every port already in use on this box (3001,
+    # 5001, 5002, 3005, 5556, 6380, 6379 — checked against `docker ps -a`
+    # before choosing it). Bound to 127.0.0.1 only, not 0.0.0.0: nginx is on
+    # this same machine and reaches it fine over localhost, and nothing
+    # outside the box can hit the app directly and bypass nginx/TLS.
+    ports:
+      - '127.0.0.1:4500:4000'
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      DATA_DIR: /data
+    volumes:
+      # OAuth tokens + cached summaries + sessions. A named volume, so
+      # `down`, rebuilds and `git pull` never wipe live connections.
+      - app_data:/data
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  app_data:

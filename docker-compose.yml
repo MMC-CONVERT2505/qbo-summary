@@ -1,0 +1,19 @@
+services:
+  client:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./client:/app
+      - client_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      # 'localhost' inside the container means the container, not this Windows
+      # host — the server still runs natively on Windows (Smart App Control
+      # blocks Vite's native rollup/esbuild binaries, but not the server's
+      # pure-JS deps), so the client reaches it via host.docker.internal.
+      VITE_API_TARGET: https://host.docker.internal:4000
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  client_node_modules:

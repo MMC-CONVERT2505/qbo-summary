@@ -1,0 +1,29 @@
+node_modules/
+
+# Every env file is secret (Intuit client secret, session signing key) —
+# ignore them all, then re-include the committed templates. Without the
+# wildcard, a file like .env.production would be committed by accident.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# OAuth tokens and cached client summaries — live credentials and real
+# financial data. Never commit.
+.data/
+server/.data/
+
+# Real client QuickBooks exports dropped in the project root for manual
+# cross-checking during development (e.g. "All data IAA.csv", client Excel
+# exports) — never real project files, never something to commit.
+/*.csv
+/*.xlsx
+
+# Local mkcert certificates
+server/certs/
+
+dist/
+client/dist/
+server/test/out/
+*.log
+.DS_Store

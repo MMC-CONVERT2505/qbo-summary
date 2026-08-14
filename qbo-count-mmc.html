@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QBO Count — QuickBooks file census</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ════════════════════════════════════════════════════════════
+   QBO Count — QuickBooks theme
+
+   Every colour below was sampled pixel-by-pixel from a live
+   QuickBooks Online session rather than recalled, so the greens,
+   blues, text greys and rules match the product exactly. Where a
+   state did not appear in the source (button hover, selected tint)
+   the value is derived from a sampled colour and marked as such.
+
+   Mulish stands in for Avenir Next (QuickBooks' brand face) —
+   the same geometric-humanist proportions, and free to embed.
+   Roboto Mono carries the counter digits so the reels align.
+
+   NOTE: the mark top-left is a placeholder. Replace it with the
+   official QuickBooks lockup, used per Intuit's brand guidelines.
+   ════════════════════════════════════════════════════════════ */
+
+:root{
+  /* Sampled directly from a live QuickBooks Online session, not recalled.
+     Values marked (derived) are tints or shades computed from a sampled
+     colour because no example of that state appeared in the screenshot. */
+  --green:#2CA01C;        /* logo green — confirmed in Intuit's partner guide */
+  --green-dark:#23801A;   /* (derived) button hover */
+  --green-wash:#E9F5E7;   /* (derived) selected-row tint */
+  --blue:#205EA3;         /* link text */
+  --blue-wash:#E7EEF6;    /* (derived) */
+  --navy:#00254A;         /* nav tile icons */
+  --teal:#00D5B0;         /* accent */
+  --forest:#002B21;       /* active nav tile */
+  --ink:#21262A;          /* body and heading text */
+  --gray:#747779;         /* secondary text */
+  --gray-light:#989B9C;   /* tertiary text */
+  --border:#D3D4D4;       /* card and divider rules */
+  --border-soft:#DBE0E2;  /* inner dividers */
+  --bg:#F0F4F6;           /* app background */
+  --field:#F8FAFB;        /* input fill */
+  --white:#FFFFFF;
+  --amber:#BF752A;        /* sampled warm accent */
+
+  --sans:'Mulish','Avenir Next',system-ui,-apple-system,sans-serif;
+  --mono:'Roboto Mono',ui-monospace,monospace;
+
+  --ease:cubic-bezier(.25,.6,.35,1);
+  --card-shadow:0 1px 2px rgba(57,58,61,.07),0 8px 20px -16px rgba(57,58,61,.35);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* ── product bar ────────────────────────────────────────────── */
+.appbar{
+  background:var(--white);border-bottom:1px solid var(--border);
+  padding:0 24px;height:60px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:20;
+}
+/* MMC is the product owner, so its mark leads and sits largest. */
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.brand__logo{display:block;flex:0 0 auto}
+.brand__name{font-weight:800;font-size:17px;letter-spacing:-.025em;color:var(--ink)}
+/* Vertical pipe, per Intuit's lockup rule on separator colour. */
+.brand__rule{width:1px;height:22px;background:#6B6C72;opacity:.45;margin:0 4px}
+.brand__app{font-weight:600;font-size:15px;letter-spacing:-.015em;color:var(--ink)}
+.brand__app span{font-weight:400;color:var(--gray)}
+.appbar__sp{flex:1}
+
+/* ── screens ────────────────────────────────────────────────── */
+.screen{display:none;min-height:calc(100vh - 60px);padding:36px 24px 64px;
+  animation:enter .4s var(--ease) both}
+.screen.live{display:block}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.wrap{max-width:1040px;margin:0 auto}
+
+/* ── type ───────────────────────────────────────────────────── */
+.kicker{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
+h1{font-weight:800;font-size:clamp(32px,5vw,50px);line-height:1.1;letter-spacing:-.025em;margin:14px 0 0}
+h1 em{font-style:normal;color:var(--green)}
+h2{font-weight:700;font-size:19px;letter-spacing:-.015em;margin:0}
+.lede{font-size:16px;color:var(--gray);max-width:47ch;margin:14px 0 0}
+.note{font-size:12.5px;color:var(--gray-light)}
+
+/* ── buttons ────────────────────────────────────────────────── */
+.btn{
+  font-family:var(--sans);font-size:15px;font-weight:700;
+  background:var(--green);color:var(--white);border:1px solid var(--green);border-radius:4px;
+  padding:11px 24px;cursor:pointer;
+  transition:background .16s var(--ease),border-color .16s var(--ease),box-shadow .16s var(--ease);
+}
+.btn:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn:active{box-shadow:inset 0 2px 4px rgba(0,0,0,.16)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.link{
+  font-family:var(--sans);font-size:14px;font-weight:600;
+  background:none;border:none;color:var(--blue);cursor:pointer;padding:8px 2px;
+}
+.link:hover{text-decoration:underline}
+
+/* ═══ 1 · connect ═══ */
+#s1 .wrap{min-height:calc(100vh - 160px);display:flex;flex-direction:column;justify-content:center}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:52px;align-items:center}
+.cta{display:flex;align-items:center;gap:18px;margin-top:30px;flex-wrap:wrap}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:6px;
+  box-shadow:var(--card-shadow)}
+.preview{padding:6px 20px}
+.preview__r{display:flex;justify-content:space-between;align-items:center;
+  padding:13px 0;border-bottom:1px solid var(--border-soft);font-size:14px}
+.preview__r:last-child{border-bottom:none}
+.preview__r b{font-family:var(--mono);font-weight:500;font-size:17px;color:var(--ink)}
+
+/* ═══ 2 · period ═══ */
+.bar{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;
+  padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap}
+.who{font-weight:700;font-size:16px;letter-spacing:-.015em}
+.who span{display:block;font-family:var(--mono);font-size:11px;font-weight:400;
+  color:var(--gray);margin-top:3px}
+
+.picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:12px;margin:24px 0}
+.pick{
+  text-align:left;background:var(--white);border:1px solid var(--border);border-radius:6px;
+  padding:16px 17px;cursor:pointer;position:relative;
+  transition:border-color .16s var(--ease),box-shadow .16s var(--ease);
+}
+.pick:hover{border-color:var(--green);box-shadow:var(--card-shadow)}
+.pick.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);background:var(--green-wash)}
+.pick.on::after{
+  content:'';position:absolute;top:15px;right:15px;width:16px;height:16px;border-radius:50%;
+  background:var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.3l3 3 6-6.6' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/13px no-repeat;
+}
+.pick h3{font-weight:700;font-size:15px;margin:0 0 4px;letter-spacing:-.01em}
+.pick p{margin:0;font-family:var(--mono);font-size:11.5px;color:var(--gray)}
+
+.custom{display:none;gap:16px;align-items:flex-end;flex-wrap:wrap;
+  background:var(--white);border:1px solid var(--border);border-radius:6px;
+  padding:16px 18px;margin-bottom:24px;animation:enter .3s var(--ease) both}
+.custom.live{display:flex}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.field input{font-family:var(--mono);font-size:14px;padding:9px 11px;
+  border:1px solid var(--border);border-radius:4px;background:var(--field);color:var(--ink)}
+.field input:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 1px var(--blue)}
+
+/* ═══ 3 · counting ═══ */
+#s3 .wrap{min-height:calc(100vh - 160px);display:flex;flex-direction:column;
+  justify-content:center;align-items:center;text-align:center}
+.dial{font-weight:800;font-size:clamp(50px,11vw,104px);line-height:1;
+  letter-spacing:-.04em;color:var(--green)}
+.ticker{font-family:var(--mono);font-size:13px;color:var(--gray);height:22px;margin-top:16px}
+.ticker b{color:var(--amber);font-weight:500}
+.meter{width:min(400px,78vw);height:6px;background:var(--border);border-radius:99px;
+  overflow:hidden;margin-top:26px}
+.meter i{display:block;height:100%;width:0;background:var(--green);
+  border-radius:99px;transition:width .3s linear}
+
+/* ═══ 4 · results ═══ */
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(236px,1fr));gap:14px;margin-bottom:40px}
+.total{background:var(--white);border:1px solid var(--border);border-radius:6px;
+  padding:18px 20px 16px;box-shadow:var(--card-shadow);position:relative;overflow:hidden}
+.total::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.total.t2::before{background:var(--blue)}
+.total.t3::before{background:var(--navy)}
+.total__k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)}
+.total__s{font-family:var(--mono);font-size:11.5px;color:var(--gray);margin-top:6px}
+
+/* ── odometer ───────────────────────────────────────────────── */
+.odo{display:inline-flex;align-items:flex-start;font-family:var(--mono);font-weight:500;
+  line-height:1;overflow:hidden}
+.odo .win{display:inline-block;overflow:hidden;height:1em;vertical-align:top}
+.odo .reel{display:flex;flex-direction:column;will-change:transform}
+.odo .reel span{height:1em;display:block}
+.odo .sep{display:inline-block}
+.total .odo{font-size:42px;letter-spacing:-.04em;margin-top:6px;color:var(--ink)}
+.dial .odo{font-size:inherit;font-family:var(--sans);font-weight:800;letter-spacing:-.04em}
+.row .odo{font-size:15px}
+
+/* ── groups ─────────────────────────────────────────────────── */
+.group{margin-bottom:32px}
+.group__hd{display:flex;align-items:baseline;gap:12px;margin-bottom:11px}
+.group__hd i{flex:1;height:1px;background:var(--border);font-style:normal}
+.group__hd em{font-family:var(--mono);font-style:normal;font-size:11.5px;color:var(--gray)}
+
+.rows{background:var(--white);border:1px solid var(--border);border-radius:6px;
+  overflow:hidden;box-shadow:var(--card-shadow)}
+.row{display:flex;align-items:center;gap:16px;padding:11px 18px;
+  border-bottom:1px solid var(--border-soft);transition:background .14s var(--ease)}
+.row:last-child{border-bottom:none}
+.row:hover{background:#FAFBFC}
+.row.nil{color:var(--gray-light)}
+.row.nil .odo{color:var(--gray-light)}
+.row__n{flex:1;font-size:14.5px;font-weight:500}
+.row__e{font-family:var(--mono);font-size:11px;color:var(--gray);flex:0 0 auto}
+.row .odo{flex:0 0 auto;min-width:62px;justify-content:flex-end}
+.row__bar{flex:0 0 86px;height:6px;background:var(--border-soft);border-radius:99px;overflow:hidden}
+.row__bar i{display:block;height:100%;width:0;border-radius:99px;transition:width .7s var(--ease)}
+.g1 i{background:var(--green)}.g2 i{background:var(--blue)}.g3 i{background:var(--navy)}
+
+.tailnote{font-family:var(--mono);font-size:11.5px;color:var(--gray);
+  display:flex;gap:9px;flex-wrap:wrap;margin-top:28px;padding-top:16px;border-top:1px solid var(--border)}
+.tailnote i{font-style:normal;color:var(--border)}
+
+@media(max-width:560px){
+  .brand__rule,.brand__app{display:none}
+}
+@media(max-width:820px){
+  .hero{grid-template-columns:1fr;gap:30px}
+  .screen{padding:22px 16px 50px}
+  .total .odo{font-size:34px}
+  .row__bar,.row__e{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <!-- MMC brand. Swap the <svg> below for your real logo file:
+       <img src="/mmc-logo.svg" alt="MMC" class="brand__logo" />       -->
+  <a class="brand" href="#" aria-label="MMC home">
+    <svg class="brand__logo" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+      <rect width="30" height="30" rx="7" fill="#00254A"/>
+      <path d="M7 21V10.4l4 6.2 4-6.2V21" fill="none" stroke="#fff"
+            stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M23 12.2a4.6 4.6 0 100 6.6" fill="none" stroke="#00D5B0"
+            stroke-width="2.1" stroke-linecap="round"/>
+    </svg>
+    <span class="brand__name">MMC</span>
+  </a>
+
+  <span class="brand__rule" aria-hidden="true"></span>
+  <span class="brand__app">Count <span>· file census</span></span>
+
+  <div class="appbar__sp"></div>
+</header>
+
+<!-- ══════ 1 · CONNECT ══════ -->
+<section class="screen live" id="s1">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <div class="kicker">QuickBooks Online</div>
+        <h1>Count <em>everything</em> in the file.</h1>
+        <p class="lede">Connect a company, choose a period, and get an exact count of every
+        record and every attachment it holds. Nothing else.</p>
+        <div class="cta">
+          <button class="btn" id="go-connect">Connect to QuickBooks</button>
+          <span class="note">Read-only access · about 20 seconds</span>
+        </div>
+      </div>
+
+      <div class="card preview" aria-hidden="true">
+        <div class="preview__r"><span>Customers</span><b class="odo" data-n="212"></b></div>
+        <div class="preview__r"><span>Bills</span><b class="odo" data-n="1043"></b></div>
+        <div class="preview__r"><span>Journal entries</span><b class="odo" data-n="87"></b></div>
+        <div class="preview__r"><span>Attachments</span><b class="odo" data-n="1377"></b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 2 · PERIOD ══════ -->
+<section class="screen" id="s2">
+  <div class="wrap">
+    <div class="bar">
+      <div class="who">International Advertising Association Inc. Global Office
+        <span>Realm 193514459666884 · production · fiscal year starts July</span></div>
+      <button class="link" data-back="s1">Use a different company</button>
+    </div>
+
+    <div class="kicker">Step 2 of 2</div>
+    <h2 style="font-size:25px;margin:10px 0 0">Which period should I count?</h2>
+    <p class="lede" style="font-size:15px">Transaction counts cover records dated inside the
+    range. Lists such as customers and accounts are always counted in full.</p>
+
+    <div class="picks">
+      <button class="pick on" data-r="ytd"><h3>This year to date</h3><p>01 Jul 2026 → 03 Aug 2026</p></button>
+      <button class="pick" data-r="last"><h3>Last full year</h3><p>01 Jul 2025 → 30 Jun 2026</p></button>
+      <button class="pick" data-r="all"><h3>Since inception</h3><p>everything in the file</p></button>
+      <button class="pick" data-r="custom"><h3>Custom range</h3><p>choose your own dates</p></button>
+    </div>
+
+    <div class="custom" id="custom">
+      <div class="field"><label for="d1">From</label><input id="d1" type="date" value="2026-07-01" /></div>
+      <div class="field"><label for="d2">To</label><input id="d2" type="date" value="2026-08-03" /></div>
+    </div>
+
+    <button class="btn" id="go-count">Apply and count</button>
+  </div>
+</section>
+
+<!-- ══════ 3 · COUNTING ══════ -->
+<section class="screen" id="s3">
+  <div class="wrap">
+    <div class="kicker">Counting</div>
+    <div class="dial"><span class="odo" id="live-dial" data-n="0"></span></div>
+    <div class="ticker" id="ticker">Opening the company file…</div>
+    <div class="meter"><i id="meter"></i></div>
+  </div>
+</section>
+
+<!-- ══════ 4 · RESULTS ══════ -->
+<section class="screen" id="s4">
+  <div class="wrap">
+    <div class="bar">
+      <div class="who">International Advertising Association Inc. Global Office
+        <span id="range-label">FY2026 to date · 01 Jul → 03 Aug 2026</span></div>
+      <button class="link" data-back="s2">Change period</button>
+    </div>
+
+    <div class="totals">
+      <div class="total">
+        <div class="total__k">List records</div>
+        <div class="odo" data-n="654"></div>
+        <div class="total__s">10 record types · counted in full</div>
+      </div>
+      <div class="total t2">
+        <div class="total__k">Transactions</div>
+        <div class="odo" data-n="26"></div>
+        <div class="total__s">17 types · in the selected period</div>
+      </div>
+      <div class="total t3">
+        <div class="total__k">Attachments</div>
+        <div class="odo" data-n="1377"></div>
+        <div class="total__s">312.9 MB · across 1,269 records</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group__hd"><h2>Lists</h2><i></i><em>counted in full</em></div>
+      <div class="rows" data-max="212">
+        <div class="row"><span class="row__n">Customers</span><span class="row__e">Customer</span><span class="row__bar g1"><i data-v="212"></i></span><span class="odo" data-n="212"></span></div>
+        <div class="row"><span class="row__n">Chart of accounts</span><span class="row__e">Account</span><span class="row__bar g1"><i data-v="187"></i></span><span class="odo" data-n="187"></span></div>
+        <div class="row"><span class="row__n">Vendors</span><span class="row__e">Vendor</span><span class="row__bar g1"><i data-v="148"></i></span><span class="odo" data-n="148"></span></div>
+        <div class="row"><span class="row__n">Products &amp; services</span><span class="row__e">Item</span><span class="row__bar g1"><i data-v="64"></i></span><span class="odo" data-n="64"></span></div>
+        <div class="row"><span class="row__n">Classes</span><span class="row__e">Class</span><span class="row__bar g1"><i data-v="12"></i></span><span class="odo" data-n="12"></span></div>
+        <div class="row"><span class="row__n">Employees</span><span class="row__e">Employee</span><span class="row__bar g1"><i data-v="9"></i></span><span class="odo" data-n="9"></span></div>
+        <div class="row"><span class="row__n">Payment terms</span><span class="row__e">Term</span><span class="row__bar g1"><i data-v="8"></i></span><span class="odo" data-n="8"></span></div>
+        <div class="row"><span class="row__n">Departments</span><span class="row__e">Department</span><span class="row__bar g1"><i data-v="6"></i></span><span class="odo" data-n="6"></span></div>
+        <div class="row"><span class="row__n">Payment methods</span><span class="row__e">PaymentMethod</span><span class="row__bar g1"><i data-v="5"></i></span><span class="odo" data-n="5"></span></div>
+        <div class="row"><span class="row__n">Tax codes</span><span class="row__e">TaxCode</span><span class="row__bar g1"><i data-v="3"></i></span><span class="odo" data-n="3"></span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group__hd"><h2>Transactions</h2><i></i><em>in the selected period</em></div>
+      <div class="rows" data-max="11">
+        <div class="row"><span class="row__n">Bill payments</span><span class="row__e">BillPayment</span><span class="row__bar g2"><i data-v="11"></i></span><span class="odo" data-n="11"></span></div>
+        <div class="row"><span class="row__n">Payments received</span><span class="row__e">Payment</span><span class="row__bar g2"><i data-v="5"></i></span><span class="odo" data-n="5"></span></div>
+        <div class="row"><span class="row__n">Bills</span><span class="row__e">Bill</span><span class="row__bar g2"><i data-v="5"></i></span><span class="odo" data-n="5"></span></div>
+        <div class="row"><span class="row__n">Deposits</span><span class="row__e">Deposit</span><span class="row__bar g2"><i data-v="2"></i></span><span class="odo" data-n="2"></span></div>
+        <div class="row"><span class="row__n">Invoices</span><span class="row__e">Invoice</span><span class="row__bar g2"><i data-v="1"></i></span><span class="odo" data-n="1"></span></div>
+        <div class="row"><span class="row__n">Journal entries</span><span class="row__e">JournalEntry</span><span class="row__bar g2"><i data-v="1"></i></span><span class="odo" data-n="1"></span></div>
+        <div class="row"><span class="row__n">Transfers</span><span class="row__e">Transfer</span><span class="row__bar g2"><i data-v="1"></i></span><span class="odo" data-n="1"></span></div>
+        <div class="row nil"><span class="row__n">Sales receipts</span><span class="row__e">SalesReceipt</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Credit memos</span><span class="row__e">CreditMemo</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Refund receipts</span><span class="row__e">RefundReceipt</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Estimates</span><span class="row__e">Estimate</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Vendor credits</span><span class="row__e">VendorCredit</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Purchase orders</span><span class="row__e">PurchaseOrder</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Expenses (cash)</span><span class="row__e">Purchase</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Checks</span><span class="row__e">Purchase</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Credit card charges</span><span class="row__e">Purchase</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+        <div class="row nil"><span class="row__n">Time activities</span><span class="row__e">TimeActivity</span><span class="row__bar g2"><i data-v="0"></i></span><span class="odo" data-n="0"></span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group__hd"><h2>Attachments</h2><i></i><em>records carrying files</em></div>
+      <div class="rows" data-max="790">
+        <div class="row"><span class="row__n">Bill</span><span class="row__e">821 links</span><span class="row__bar g3"><i data-v="790"></i></span><span class="odo" data-n="790"></span></div>
+        <div class="row"><span class="row__n">Invoice</span><span class="row__e">221 links</span><span class="row__bar g3"><i data-v="218"></i></span><span class="odo" data-n="218"></span></div>
+        <div class="row"><span class="row__n">Purchase</span><span class="row__e">225 links</span><span class="row__bar g3"><i data-v="191"></i></span><span class="odo" data-n="191"></span></div>
+        <div class="row"><span class="row__n">Vendor</span><span class="row__e">33 links</span><span class="row__bar g3"><i data-v="33"></i></span><span class="odo" data-n="33"></span></div>
+        <div class="row"><span class="row__n">BillPayment</span><span class="row__e">15 links</span><span class="row__bar g3"><i data-v="15"></i></span><span class="odo" data-n="15"></span></div>
+        <div class="row"><span class="row__n">JournalEntry</span><span class="row__e">39 links</span><span class="row__bar g3"><i data-v="12"></i></span><span class="odo" data-n="12"></span></div>
+        <div class="row"><span class="row__n">Payment</span><span class="row__e">4 links</span><span class="row__bar g3"><i data-v="4"></i></span><span class="odo" data-n="4"></span></div>
+        <div class="row"><span class="row__n">SalesReceipt</span><span class="row__e">2 links</span><span class="row__bar g3"><i data-v="2"></i></span><span class="odo" data-n="2"></span></div>
+        <div class="row"><span class="row__n">CreditMemo</span><span class="row__e">2 links</span><span class="row__bar g3"><i data-v="2"></i></span><span class="odo" data-n="2"></span></div>
+        <div class="row"><span class="row__n">Deposit</span><span class="row__e">1 link</span><span class="row__bar g3"><i data-v="1"></i></span><span class="odo" data-n="1"></span></div>
+        <div class="row"><span class="row__n">VendorCredit</span><span class="row__e">1 link</span><span class="row__bar g3"><i data-v="1"></i></span><span class="odo" data-n="1"></span></div>
+      </div>
+    </div>
+
+    <div class="tailnote">
+      <span>43 count queries</span><i>·</i>
+      <span>batched into 2 requests</span><i>·</i>
+      <span>counted in 17.1s</span><i>·</i>
+      <span>fiscal year starts July</span>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $  = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  /* ── odometer ────────────────────────────────────────────────
+     Each digit gets its own reel of 0–9, so rolling a digit is a
+     transform on that reel rather than a number being repainted.  */
+  function buildOdo(el, value) {
+    const text = Number(value).toLocaleString('en-US');
+    el.innerHTML = '';
+    el._reels = [];
+
+    for (const ch of text) {
+      if (ch < '0' || ch > '9') {
+        const s = document.createElement('span');
+        s.className = 'sep';
+        s.textContent = ch;
+        el.appendChild(s);
+        continue;
+      }
+      const win = document.createElement('span');
+      win.className = 'win';
+      const reel = document.createElement('span');
+      reel.className = 'reel';
+      for (let d = 0; d <= 9; d++) {
+        const n = document.createElement('span');
+        n.textContent = d;
+        reel.appendChild(n);
+      }
+      win.appendChild(reel);
+      el.appendChild(win);
+      el._reels.push({ reel, target: +ch });
+    }
+  }
+
+  function rollOdo(el, { delay = 0 } = {}) {
+    (el._reels || []).forEach((r, i) => {
+      if (reduced) { r.reel.style.transform = `translateY(-${r.target}em)`; return; }
+      r.reel.style.transition = 'none';
+      r.reel.style.transform = 'translateY(0)';
+      void r.reel.offsetHeight; // commit the reset before rolling
+      r.reel.style.transition =
+        `transform ${740 + i * 88}ms cubic-bezier(.25,.6,.35,1) ${delay + i * 40}ms`;
+      r.reel.style.transform = `translateY(-${r.target}em)`;
+    });
+  }
+
+  function primeOdo(root, stagger = 0) {
+    root.querySelectorAll('.odo[data-n]').forEach((el, i) => {
+      buildOdo(el, el.dataset.n);
+      rollOdo(el, { delay: stagger * i });
+    });
+  }
+
+  /* ── screens ─────────────────────────────────────────────── */
+  let current = 's1';
+  function show(id) {
+    if (id === current) return;
+    $('#' + current).classList.remove('live');
+    $('#' + id).classList.add('live');
+    current = id;
+    scrollTo({ top: 0, behavior: 'auto' });
+    if (id === 's1') primeOdo($('#s1'), 68);
+    if (id === 's4') { primeOdo($('#s4'), 30); fillBars(); }
+  }
+  $$('[data-back]').forEach(b => b.addEventListener('click', () => show(b.dataset.back)));
+
+  primeOdo($('#s1'), 68);
+
+  /* ── 1 · connect ─────────────────────────────────────────── */
+  $('#go-connect').addEventListener('click', e => {
+    const b = e.currentTarget;
+    b.textContent = 'Opening QuickBooks…';
+    b.disabled = true;
+    // Stands in for the OAuth round trip.
+    setTimeout(() => {
+      b.textContent = 'Connect to QuickBooks';
+      b.disabled = false;
+      show('s2');
+    }, 850);
+  });
+
+  /* ── 2 · period ──────────────────────────────────────────── */
+  const LABELS = {
+    ytd:    'FY2026 to date · 01 Jul → 03 Aug 2026',
+    last:   'FY2025 full year · 01 Jul 2025 → 30 Jun 2026',
+    all:    'Since inception · everything in the file',
+    custom: 'Custom range'
+  };
+  let range = 'ytd';
+
+  $$('.pick').forEach(p => p.addEventListener('click', () => {
+    $$('.pick').forEach(o => o.classList.remove('on'));
+    p.classList.add('on');
+    range = p.dataset.r;
+    $('#custom').classList.toggle('live', range === 'custom');
+  }));
+
+  /* ── 3 · counting ────────────────────────────────────────── */
+  const STEPS = [
+    ['Customers', 212], ['Vendors', 148], ['Employees', 9], ['Products & services', 64],
+    ['Chart of accounts', 187], ['Classes', 12], ['Departments', 6], ['Payment terms', 8],
+    ['Payment methods', 5], ['Tax codes', 3],
+    ['Invoices', 1], ['Payments received', 5], ['Deposits', 2], ['Bills', 5],
+    ['Bill payments', 11], ['Journal entries', 1], ['Transfers', 1],
+    ['Attachments', 1377]
+  ];
+
+  $('#go-count').addEventListener('click', () => {
+    $('#range-label').textContent = range === 'custom'
+      ? `Custom · ${$('#d1').value} → ${$('#d2').value}`
+      : LABELS[range];
+    show('s3');
+    runCount();
+  });
+
+  function runCount() {
+    const dial = $('#live-dial'), ticker = $('#ticker'), meter = $('#meter');
+    let running = 0, i = 0;
+
+    buildOdo(dial, 0);
+    meter.style.width = '0%';
+
+    const tick = () => {
+      if (i >= STEPS.length) {
+        ticker.textContent = 'Done — 2,057 records counted';
+        setTimeout(() => show('s4'), 560);
+        return;
+      }
+      const [name, n] = STEPS[i];
+      running += n;
+      i++;
+
+      ticker.innerHTML = 'counting <b></b>';
+      ticker.querySelector('b').textContent = name;
+      meter.style.width = (i / STEPS.length * 100) + '%';
+      buildOdo(dial, running);
+      rollOdo(dial);
+
+      setTimeout(tick, reduced ? 40 : 195);
+    };
+    setTimeout(tick, reduced ? 0 : 380);
+  }
+
+  /* ── 4 · results ─────────────────────────────────────────── */
+  function fillBars() {
+    $$('.rows').forEach(group => {
+      const max = +group.dataset.max || 1;
+      group.querySelectorAll('.row__bar i').forEach((bar, i) => {
+        const v = +bar.dataset.v;
+        const pct = v > 0 ? Math.max(v / max * 100, 4) : 0;
+        setTimeout(() => { bar.style.width = pct + '%'; }, reduced ? 0 : 230 + i * 38);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

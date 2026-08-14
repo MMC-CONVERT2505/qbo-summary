@@ -1,0 +1,37 @@
+# Keep the build context small and, more importantly, keep secrets and local
+# state out of the image entirely.
+
+node_modules
+**/node_modules
+
+# Real credentials — these come from the environment at runtime, never baked in.
+.env
+.env.*
+!.env.production.example
+
+# Live OAuth tokens and cached client summaries. Must never land in an image.
+.data
+server/.data
+
+# Local mkcert certificates — production TLS is handled by Caddy.
+server/certs
+
+# Build output (the image builds its own) and local caches
+client/dist
+server/test/out
+*.log
+
+# Editor/OS noise
+.git
+.gitignore
+.DS_Store
+.vscode
+.idea
+
+# Dev-only compose file and scratch material
+docker-compose.yml
+*.md
+!README.md
+qbo-count-*.html
+*.csv
+*.xlsx
