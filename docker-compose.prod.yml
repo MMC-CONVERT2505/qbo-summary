@@ -12,8 +12,14 @@
 #
 # The dev setup (docker-compose.yml, Vite dev server) is untouched and is
 # still what you use locally.
-
-name: qbo-summary
+#
+# No top-level `name:` field here — that's a newer Compose Specification
+# key that older docker-compose (this box runs the v1.29.2 standalone
+# binary, not the v2 plugin) rejects outright. Not needed anyway: run this
+# from the ~/qbo-summary folder and docker-compose derives the same
+# "qbo-summary" project name from the directory name, so containers,
+# volumes, and the network still come out prefixed qbo-summary_* /
+# qbo-summary-* exactly as intended — just don't rename the folder.
 
 services:
   app:

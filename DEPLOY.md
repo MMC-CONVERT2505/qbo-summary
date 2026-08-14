@@ -12,6 +12,13 @@ an internal port that only nginx can reach.
 Local development is unchanged — keep using `docker compose up` with the
 existing `docker-compose.yml` and `node src/index.js`.
 
+**Note on the command name:** every production command below uses
+`docker-compose` (hyphenated) because that's what's installed on this box —
+the older v1.29.2 standalone binary, not the newer `docker compose`
+(space) plugin. Confirm with `docker-compose --version` if unsure. This is
+different from a fresh box, which usually ships the v2 plugin instead —
+don't be surprised if a future server needs the space form.
+
 ---
 
 ## Before you start
@@ -49,14 +56,14 @@ Edit `.env.production` and fill in:
 ### Start the container
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 Check it's actually up and reachable **on localhost only** — this is the
 same port nginx will proxy to:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.prod.yml ps
 curl -I http://127.0.0.1:4500/api/health
 ```
 
@@ -104,17 +111,17 @@ pick a period → count → Results, for real.
 # Deploy the latest code
 cd ~/qbo-summary
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.prod.yml up -d --build
 
 # Stop / start (no rebuild)
-docker compose -f docker-compose.prod.yml down
-docker compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d
 
 # Logs
-docker compose -f docker-compose.prod.yml logs -f
+docker-compose -f docker-compose.prod.yml logs -f
 
 # What's running (this project only — distinct name, won't show the others)
-docker compose -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.prod.yml ps
 ```
 
 Note there's **no nginx step** in a normal redeploy — the site config only
@@ -127,7 +134,7 @@ port.
 summaries, and user sessions all live in the `app_data` **volume**, not the
 container. A deploy doesn't force anyone to reconnect QuickBooks or log back in.
 
-Only `docker compose -f docker-compose.prod.yml down -v` destroys that — the
+Only `docker-compose -f docker-compose.prod.yml down -v` destroys that — the
 `-v` deletes the volume. Don't use it unless you mean to wipe every connection.
 
 ---
@@ -185,13 +192,13 @@ sudo nginx -t && sudo systemctl reload nginx
 `dig +short qbo-summary.mmcconvert.com` points at this box, and that
 port 80 is reachable from the internet (security group).
 
-**App container won't start.** `docker compose -f docker-compose.prod.yml
+**App container won't start.** `docker-compose -f docker-compose.prod.yml
 logs app`. If it says `SESSION_SECRET must be set when NODE_ENV=production`,
 that variable is empty in `.env.production` — a deliberate guard against
 running with a publicly-known default signing key.
 
 **502 from nginx.** The app container isn't up, or isn't listening on 4500.
-Check `docker compose -f docker-compose.prod.yml ps` and
+Check `docker-compose -f docker-compose.prod.yml ps` and
 `curl http://127.0.0.1:4500/api/health` directly.
 
 **"Sign-in state did not match" during Connect.** The redirect URI in
