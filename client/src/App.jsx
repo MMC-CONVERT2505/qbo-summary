@@ -31,6 +31,13 @@ function Totals({ summary }) {
             : summary.periods.current.label.toLowerCase()}
         </div>
       </div>
+      {c.transactionLines !== null && (
+        <div className="total t4">
+          <div className="total__k">Total lines</div>
+          <Odometer value={c.transactionLines} />
+          <div className="total__s">raw rows · multi-account transactions count twice</div>
+        </div>
+      )}
       <div className="total t3">
         <div className="total__k">Attachments</div>
         <Odometer value={summary.attachments?.total ?? 0} />

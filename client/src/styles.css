@@ -477,6 +477,7 @@ table.ledger tbody tr.is-muted td { color: var(--faint); font-style: italic; }
 .total::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--petrol); }
 .total.t2::before { background: var(--sea); }
 .total.t3::before { background: var(--opal); }
+.total.t4::before { background: var(--sea); opacity: 0.55; }
 .total__k { font-size: 10px; font-weight: 700; letter-spacing: 0.17em; text-transform: uppercase; color: var(--muted); }
 .total__s { font-family: var(--mono); font-size: 11.5px; font-weight: 300; color: var(--muted); margin-top: 8px; }
 .total .odo { font-size: 44px; letter-spacing: -0.04em; margin-top: 8px; color: var(--petrol); }
