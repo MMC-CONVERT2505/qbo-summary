@@ -104,16 +104,14 @@ function toBucketedResult(byType) {
  * for the "Total Lines" count, which the app runs in parallel with this
  * one rather than picking a single method.
  */
-export async function fetchTransactionTypeCounts(realmId, range) {
+async function fetchTransactionTypeCountsOnce(realmId, range) {
   const params = {};
   if (range?.start) params.start_date = range.start;
   if (range?.end) params.end_date = range.end;
 
   const report = await qbo.report(realmId, 'JournalReport', params);
   const allRows = report?.Rows?.Row ?? [];
-  if (allRows.some(isTruncationRow)) {
-    throw new Error('JournalReport truncated by QBO (date range too large) — falling back to count(*)');
-  }
+  if (allRows.some(isTruncationRow)) throw new TruncatedError();
   const rows = allRows.filter((r) => r.type === 'Data');
 
   // The type is only printed on a transaction's first row; continuation
@@ -133,20 +131,80 @@ export async function fetchTransactionTypeCounts(realmId, range) {
     byType.set(label, (byType.get(label) ?? 0) + 1);
   }
 
-  return { totalEntries: byTxn.size, ...toBucketedResult(byType) };
+  // Splitting by date is safe for de-duplication here: a transaction has
+  // exactly one TxnDate, so it lands in exactly one chunk — no transaction
+  // can be double-counted across two halves.
+  return { total: byTxn.size, byType };
 }
 
+export async function fetchTransactionTypeCounts(realmId, range) {
+  const { total, byType } = await fetchWithSplitting(fetchTransactionTypeCountsOnce, realmId, range);
+  return { totalEntries: total, ...toBucketedResult(byType) };
+}
+
+/** Thrown by the single-call fetchers below when QBO capped the report. */
+class TruncatedError extends Error {}
+
+const addDays = (dateStr, n) => {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+const midpoint = (start, end) => {
+  const s = new Date(`${start}T00:00:00Z`).getTime();
+  const e = new Date(`${end}T00:00:00Z`).getTime();
+  return new Date(s + Math.floor((e - s) / 2)).toISOString().slice(0, 10);
+};
+
 /**
- * QBO's Transaction Detail by Account report, tallied by raw line count —
- * one transaction that posts to 2 accounts (or has multiple split lines)
- * counts twice here. This is the "Total Lines" figure a reviewer gets by
- * exporting that report and filtering by Transaction Type in Excel —
- * confirmed to match a real client's manual process exactly, category for
- * category, once the date range was right. Kept alongside the exact-entry
- * count above (fetchTransactionTypeCounts) rather than replaced by it,
- * since both numbers are meaningful for different purposes.
+ * Runs a report fetcher, and when QBO truncates it, splits the date range
+ * in half and runs each half separately — recursively, until every piece
+ * comes back complete — then adds the pieces up. Confirmed live to land on
+ * the exact real total on a file large enough that a single call truncates
+ * outright (73,408 lines where one call returned a silently-capped 36,349).
+ *
+ * Splits on calendar-day midpoints rather than a fixed chunk size, so it
+ * self-adjusts to how dense a file's real history actually is — a file with
+ * 30 empty years ahead of its real data (the "Since inception" 1990 floor,
+ * see periods.js) costs only the handful of cheap empty-range calls it
+ * takes to bisect past them.
+ *
+ * `fetchOnce` must return { total, byType: Map<label, count> } and throw
+ * TruncatedError when capped. Both report fetchers here are safe to split
+ * this way — each row/transaction belongs to exactly one date, so no chunk
+ * can double-count what another already counted.
  */
-export async function fetchTransactionLineCounts(realmId, range) {
+async function fetchWithSplitting(fetchOnce, realmId, range, depth = 0) {
+  try {
+    return await fetchOnce(realmId, range);
+  } catch (err) {
+    if (!(err instanceof TruncatedError)) throw err;
+    if (range.start >= range.end) {
+      // A single day alone is too dense for QBO to return in one call —
+      // real, but extraordinarily unlikely; nothing smaller left to try.
+      throw new Error(`QBO report truncated even for a single day (${range.start}) — cannot split further`);
+    }
+    if (depth >= 20) {
+      throw new Error(`QBO report still truncating after ${depth} splits — giving up`);
+    }
+
+    const mid = midpoint(range.start, range.end);
+    const rightStart = addDays(mid, 1);
+    const [left, right] = await Promise.all([
+      fetchWithSplitting(fetchOnce, realmId, { start: range.start, end: mid }, depth + 1),
+      mid >= range.end
+        ? Promise.resolve({ total: 0, byType: new Map() })
+        : fetchWithSplitting(fetchOnce, realmId, { start: rightStart, end: range.end }, depth + 1),
+    ]);
+
+    const byType = new Map(left.byType);
+    for (const [label, n] of right.byType) byType.set(label, (byType.get(label) ?? 0) + n);
+    return { total: left.total + right.total, byType };
+  }
+}
+
+async function fetchTransactionLineCountsOnce(realmId, range) {
   const params = {};
   if (range?.start) params.start_date = range.start;
   if (range?.end) params.end_date = range.end;
@@ -173,9 +231,21 @@ export async function fetchTransactionLineCounts(realmId, range) {
   };
   walk(report?.Rows);
 
-  if (truncated) {
-    throw new Error('TransactionDetailByAccount truncated by QBO (date range too large)');
-  }
+  if (truncated) throw new TruncatedError();
+  return { total: totalLines, byType };
+}
 
-  return { totalLines, ...toBucketedResult(byType) };
+/**
+ * QBO's Transaction Detail by Account report, tallied by raw line count —
+ * one transaction that posts to 2 accounts (or has multiple split lines)
+ * counts twice here. This is the "Total Lines" figure a reviewer gets by
+ * exporting that report and filtering by Transaction Type in Excel —
+ * confirmed to match a real client's manual process exactly, category for
+ * category, once the date range was right. Kept alongside the exact-entry
+ * count above (fetchTransactionTypeCounts) rather than replaced by it,
+ * since both numbers are meaningful for different purposes.
+ */
+export async function fetchTransactionLineCounts(realmId, range) {
+  const { total, byType } = await fetchWithSplitting(fetchTransactionLineCountsOnce, realmId, range);
+  return { totalLines: total, ...toBucketedResult(byType) };
 }
