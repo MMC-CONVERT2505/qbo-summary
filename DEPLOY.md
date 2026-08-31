@@ -108,10 +108,9 @@ pick a period → count → Results, for real.
 ## Everyday commands
 
 ```bash
-# Deploy the latest code
+# Deploy the latest code — pulls, builds, restarts, health-checks
 cd ~/qbo-summary
-git pull
-docker-compose -f docker-compose.prod.yml up -d --build
+./deploy.sh
 
 # Stop / start (no rebuild)
 docker-compose -f docker-compose.prod.yml down
@@ -127,6 +126,25 @@ docker-compose -f docker-compose.prod.yml ps
 Note there's **no nginx step** in a normal redeploy — the site config only
 needs touching once, at first setup, or if you ever change the internal
 port.
+
+### Why `deploy.sh` instead of `up -d --build`
+
+This box runs docker-compose v1.29.2, which crashes with
+`KeyError: 'ContainerConfig'` whenever it tries to **recreate** an existing
+container against a newer-format image — it happens on every redeploy, not
+occasionally. The build itself always succeeds; only the recreate step dies.
+`deploy.sh` removes the old container before starting the new one, which
+avoids that broken code path entirely.
+
+If you ever run the raw command by hand and hit that error, the image is
+already built — just finish it with:
+
+```bash
+docker-compose -f docker-compose.prod.yml rm -f -s app
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+Neither touches the `app_data` volume, so nothing is lost.
 
 ### What survives what
 
