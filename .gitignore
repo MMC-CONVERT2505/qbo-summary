@@ -13,11 +13,13 @@ node_modules/
 .data/
 server/.data/
 
-# Real client QuickBooks exports dropped in the project root for manual
-# cross-checking during development (e.g. "All data IAA.csv", client Excel
-# exports) — never real project files, never something to commit.
+# Real client QuickBooks exports dropped in the project root (or server/,
+# where they've also ended up) for manual cross-checking during development
+# — never real project files, never something to commit.
 /*.csv
 /*.xlsx
+server/*.csv
+server/*.xlsx
 
 # Local mkcert certificates
 server/certs/

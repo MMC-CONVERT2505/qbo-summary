@@ -57,7 +57,21 @@ export async function buildExcel(summary) {
     ['Email', summary.company.email ?? 'n/a'],
     ['Company created', summary.company.createdAt ? new Date(summary.company.createdAt).toLocaleDateString() : 'n/a'],
     ['Fiscal year starts', summary.company.fiscalYearStartMonth],
-    ['Reporting period', `${summary.periods.current.start} to ${summary.periods.current.end}`],
+    [
+      'Reporting period',
+      // 'Since inception' uses a fixed 1990-01-01 floor internally (see
+      // periods.js — deliberately not the company's real creation date,
+      // which can postdate a converted file's actual earliest transactions).
+      // That's correct for the query, but showing "1990-01-01" on a report
+      // for a file created in 2021 reads as a bug to a client — show the
+      // label with the real end date instead.
+      summary.periods.mode === 'inception'
+        ? `Since inception (through ${summary.periods.current.end})`
+        : `${summary.periods.current.start} to ${summary.periods.current.end}`,
+    ],
+    ...(summary.periods.mode === 'inception'
+      ? [['Data actually starts', summary.periods.current.actualStart ?? 'n/a']]
+      : []),
     ['List records', summary.counts.totals.listRecords],
     ['Inactive list records', summary.counts.totals.inactiveRecords],
     [`Transactions (${summary.periods.current.label})`, summary.counts.totals.transactionRecords],

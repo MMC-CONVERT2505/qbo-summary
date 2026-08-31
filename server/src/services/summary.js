@@ -4,6 +4,7 @@ import { fetchFinancials } from '../qbo/reports.js';
 import { fetchAttachments } from '../qbo/attachments.js';
 import { fetchFileProfile } from '../qbo/profile.js';
 import { resolvePeriods } from '../qbo/periods.js';
+import { fetchEarliestTransactionDate } from '../qbo/earliestTransactionDate.js';
 import { store } from '../lib/store.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
@@ -66,7 +67,19 @@ export async function generateSummary(
   const periods = resolvePeriods(company, range);
 
   onProgress({ stage: 'counts', message: 'Counting lists and transactions' });
-  const counts = await fetchCounts(realmId, { range: periods.current });
+  const [counts, earliestDataDate] = await Promise.all([
+    fetchCounts(realmId, { range: periods.current }),
+    // Only meaningful for "Since inception" — every other mode already has
+    // an explicit chosen start date, so there's nothing to look up. Soft-
+    // fails to null: this is a display nicety, not worth sinking the build.
+    periods.mode === 'inception'
+      ? fetchEarliestTransactionDate(realmId).catch((err) => {
+          logger.warn(`Earliest transaction date lookup failed: ${err.message}`);
+          return null;
+        })
+      : Promise.resolve(null),
+  ]);
+  if (earliestDataDate) periods.current.actualStart = earliestDataDate;
   onCounts(counts);
 
   onProgress({ stage: 'financials', message: 'Pulling financial reports' });

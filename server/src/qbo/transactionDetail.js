@@ -52,6 +52,24 @@ const BUCKET_OF = {
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+/**
+ * QBO silently caps both these reports on a large date range (confirmed
+ * live: a 20k+ transaction "Since inception" pull stopped partway through
+ * with no error — just a fake Data row reading "Unable to display more
+ * data. Please reduce the date range.", API-visible as a normal 200
+ * response). Left undetected, that produced a confidently-wrong,
+ * undercounted "Transactions" total (12,487 shown vs. ~20,570 real) with
+ * nothing telling the caller anything was missing. Both report functions
+ * below check for this and throw, so the existing count(*) fallback in
+ * counts.js — unaffected by report truncation since it doesn't use reports
+ * at all — takes over instead of returning a silently incomplete count.
+ */
+const TRUNCATION_MESSAGE = 'Unable to display more data';
+
+function isTruncationRow(row) {
+  return row?.ColData?.some((c) => c?.value?.includes(TRUNCATION_MESSAGE)) ?? false;
+}
+
 /** Shared by both counting paths below — rolls a { label: count } tally into bucket rows. */
 function toBucketedResult(byType) {
   const byTypeRows = [...byType.entries()]
@@ -92,7 +110,11 @@ export async function fetchTransactionTypeCounts(realmId, range) {
   if (range?.end) params.end_date = range.end;
 
   const report = await qbo.report(realmId, 'JournalReport', params);
-  const rows = (report?.Rows?.Row ?? []).filter((r) => r.type === 'Data');
+  const allRows = report?.Rows?.Row ?? [];
+  if (allRows.some(isTruncationRow)) {
+    throw new Error('JournalReport truncated by QBO (date range too large) — falling back to count(*)');
+  }
+  const rows = allRows.filter((r) => r.type === 'Data');
 
   // The type is only printed on a transaction's first row; continuation
   // rows repeat the same id with a blank value — keep whichever row for
@@ -133,9 +155,14 @@ export async function fetchTransactionLineCounts(realmId, range) {
 
   const byType = new Map();
   let totalLines = 0;
+  let truncated = false;
 
   const walk = (rows) => {
     for (const row of rows?.Row ?? []) {
+      if (isTruncationRow(row)) {
+        truncated = true;
+        continue;
+      }
       if (row.type === 'Data' && row.ColData) {
         totalLines += 1;
         const label = row.ColData[1]?.value || '(unlabeled)';
@@ -145,6 +172,10 @@ export async function fetchTransactionLineCounts(realmId, range) {
     }
   };
   walk(report?.Rows);
+
+  if (truncated) {
+    throw new Error('TransactionDetailByAccount truncated by QBO (date range too large)');
+  }
 
   return { totalLines, ...toBucketedResult(byType) };
 }

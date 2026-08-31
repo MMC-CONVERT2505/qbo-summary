@@ -25,7 +25,10 @@ function Totals({ summary }) {
         <div className="total__k">Transactions</div>
         <Odometer value={c.transactionRecords} />
         <div className="total__s">
-          {summary.counts.transactions.length} types · {summary.periods.current.label.toLowerCase()}
+          {summary.counts.transactions.length} types ·{' '}
+          {summary.periods.current.actualStart
+            ? `data from ${summary.periods.current.actualStart}`
+            : summary.periods.current.label.toLowerCase()}
         </div>
       </div>
       <div className="total t3">
