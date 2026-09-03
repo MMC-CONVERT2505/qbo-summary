@@ -58,22 +58,23 @@ export default function CountingScreen({ stage, counts, summary, error, onReveal
   }, [stage, phase]);
 
   // While waiting on the real network round trip, the dial used to just sit
-  // dead at 0 — reads as stuck/frozen, not "working." A gentle sine bounce
-  // (via requestAnimationFrame, not setInterval, so it's smooth rather than
-  // ticking) gives it life without pretending to mean anything real; it
-  // stops the instant real counts arrive and the actual reveal takes over.
+  // dead at 0 — reads as stuck/frozen, not "working." Gives it life with a
+  // small up/down wobble instead — but Odometer fully rebuilds its DOM and
+  // plays a ~760ms+ roll every time its value changes (see Odometer.jsx), so
+  // this MUST change value slowly enough for each roll to actually finish.
+  // (First attempt drove it via requestAnimationFrame at 60fps — every frame
+  // tore down and restarted the roll mid-flight, producing garbled,
+  // half-rolled digits. 950ms comfortably clears the worst case for a
+  // 2-digit value: up to ~760+90ms duration + 42ms stagger delay.)
   useEffect(() => {
     if (phase !== 'waiting' || reduced()) return;
-    let raf;
-    const start = Date.now();
-    const loop = () => {
-      const t = (Date.now() - start) / 1000;
-      const wave = (Math.sin(t * 2.2) + 1) / 2; // 0..1, smooth up/down
-      setDial(Math.round(wave * 24));
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    const wobble = [0, 11, 4, 18, 7, 23, 2, 14];
+    let i = 0;
+    const id = setInterval(() => {
+      i = (i + 1) % wobble.length;
+      setDial(wobble[i]);
+    }, 950);
+    return () => clearInterval(id);
   }, [phase]);
 
   useEffect(() => {
