@@ -57,9 +57,32 @@ export default function CountingScreen({ stage, counts, summary, error, onReveal
     }
   }, [stage, phase]);
 
+  // While waiting on the real network round trip, the dial used to just sit
+  // dead at 0 — reads as stuck/frozen, not "working." A gentle sine bounce
+  // (via requestAnimationFrame, not setInterval, so it's smooth rather than
+  // ticking) gives it life without pretending to mean anything real; it
+  // stops the instant real counts arrive and the actual reveal takes over.
+  useEffect(() => {
+    if (phase !== 'waiting' || reduced()) return;
+    let raf;
+    const start = Date.now();
+    const loop = () => {
+      const t = (Date.now() - start) / 1000;
+      const wave = (Math.sin(t * 2.2) + 1) / 2; // 0..1, smooth up/down
+      setDial(Math.round(wave * 24));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
   useEffect(() => {
     if (!counts || revealStarted.current) return;
     revealStarted.current = true;
+    // Settle the wave bounce back to 0 immediately, rather than leaving it
+    // wherever it happened to be when real counts landed — the real reveal
+    // below always counts up from 0, so the dial should visibly match that.
+    setDial(0);
 
     const rows = [
       ...counts.lists.filter((r) => typeof r.total === 'number').map((r) => [r.label, r.total]),
