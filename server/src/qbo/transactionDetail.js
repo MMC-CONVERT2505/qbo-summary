@@ -70,6 +70,29 @@ function isTruncationRow(row) {
   return row?.ColData?.some((c) => c?.value?.includes(TRUNCATION_MESSAGE)) ?? false;
 }
 
+// Every bucket the results screen/Excel can show, in the firm's own
+// file-review order (catalog.js). This report-based counting method only
+// sees a transaction type at all if at least one row of it exists in the
+// selected period — a file with zero Vendor Credits never produces a "Bill
+// Credit" row to group, so without this list that bucket would silently
+// vanish from the output instead of reading as a real "0". Seeded in after
+// the real data so every bucket always shows, matching how the Lists sheet
+// already shows every list type even at zero.
+const ALL_BUCKETS = [
+  'Bank',
+  'Credit Card',
+  'Bill',
+  'Bill Credit',
+  'Invoice',
+  'Credit memo',
+  'Manual Journal',
+  'Sales receipts',
+  'Estimates',
+  'Purchase orders',
+  'Refund receipts',
+  'Time activities',
+];
+
 /** Shared by both counting paths below — rolls a { label: count } tally into bucket rows. */
 function toBucketedResult(byType) {
   const byTypeRows = [...byType.entries()]
@@ -82,6 +105,9 @@ function toBucketedResult(byType) {
     b.total += row.total;
     b.members.push(row.label);
     byBucket.set(row.bucket, b);
+  }
+  for (const label of ALL_BUCKETS) {
+    if (!byBucket.has(label)) byBucket.set(label, { label, total: 0, members: [] });
   }
   const buckets = [...byBucket.values()]
     .map((b) => ({ key: slug(b.label), label: b.label, total: b.total, status: 'ok', note: null, members: b.members }))
