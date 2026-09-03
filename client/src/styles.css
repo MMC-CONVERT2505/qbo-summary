@@ -461,6 +461,13 @@ table.ledger tbody tr.is-muted td { color: var(--faint); font-style: italic; }
   color: var(--petrol);
 }
 .dial .odo { font-size: inherit; font-family: var(--display); font-weight: 400; font-variation-settings: 'opsz' 72; }
+/* Simple, safe "still working" cue while waiting on the network round trip,
+   before real counts exist — a pure opacity breathe, same pattern as
+   .ticker--pulse below. Deliberately doesn't touch the dial's numeric value
+   at all, so it can never fight Odometer's own roll animation (see
+   CountingScreen.jsx for why that matters — a value-changing version of this
+   produced garbled, half-rolled digits). */
+.dial--pulse { animation: ticker-pulse 1.6s ease-in-out infinite; }
 .ticker { font-family: var(--mono); font-size: 13px; font-weight: 300; color: var(--muted); height: 22px; margin-top: 18px; letter-spacing: 0.01em; }
 .ticker b { color: var(--amber); font-weight: 500; }
 .ticker--pulse { animation: ticker-pulse 1.6s ease-in-out infinite; }
