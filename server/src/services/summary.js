@@ -56,7 +56,7 @@ function cacheKey(realmId, range) {
  * Runs every phase and assembles the full company summary.
  * `onProgress` lets the HTTP layer stream stage updates to the browser.
  */
-export async function generateSummary(
+async function buildSummary(
   realmId,
   { onProgress = () => {}, onCounts = () => {}, accountingMethod, range } = {}
 ) {
@@ -131,6 +131,34 @@ export async function generateSummary(
   onProgress({ stage: 'done', message: 'Summary ready' });
   logger.info(`Summary for ${realmId} (${periods.mode}) built in ${summary.durationMs}ms`);
   return summary;
+}
+
+// Builds currently in progress, keyed the same way as the cache — a second
+// caller for the exact same company+period joins the one already running
+// instead of starting an independent, fully redundant build of its own.
+//
+// Confirmed live this was a real problem, not a theoretical one: a single
+// slow build (a large "Since inception" pull) led to 7 separate concurrent
+// rebuilds of the same company+period stacking up (page reloads/retries
+// while the first one was still running, each starting its own from
+// scratch), which multiplied QBO API load badly enough to push unrelated
+// requests — on a completely different company — past nginx's timeout.
+//
+// Trade-off, accepted deliberately: a caller that joins an in-progress
+// build (rather than starting the first one) doesn't get that build's
+// onProgress/onCounts ticks — those already fired for the original caller.
+// It still gets the final result once the shared build finishes. Silent
+// progress beats a duplicate multi-minute rebuild.
+const inFlight = new Map();
+
+export function generateSummary(realmId, options = {}) {
+  const key = cacheKey(realmId, options.range);
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const promise = buildSummary(realmId, options).finally(() => inFlight.delete(key));
+  inFlight.set(key, promise);
+  return promise;
 }
 
 /** Returns the cached summary, rebuilding it when stale or when forced. */

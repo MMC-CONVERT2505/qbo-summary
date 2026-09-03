@@ -3,10 +3,25 @@ import { logger } from '../lib/logger.js';
 import { createLimiter } from '../lib/limiter.js';
 import { getValidTokens, refreshTokens } from './oauth.js';
 
-const limit = createLimiter({
-  maxConcurrent: config.qbo.maxConcurrent,
-  minGapMs: config.qbo.minRequestGapMs,
-});
+// One limiter per realm, not one shared across the whole process. Intuit's
+// own limits (500 req/min, 10 concurrent) are per-realm too, so this
+// actually matches reality — and it means a huge build for one company
+// (e.g. a "Since inception" pull that fans out into dozens of report calls,
+// see transactionDetail.js) can never starve a different company's simple
+// requests, like an unrelated user's /api/auth/status check, by sitting
+// ahead of it in the same queue. Confirmed live: before this, one company's
+// pile-up of overlapping big builds pushed other realms' plain status
+// checks past nginx's timeout entirely (504s) even though those requests
+// individually take milliseconds.
+const limiters = new Map();
+function limiterFor(realmId) {
+  let l = limiters.get(realmId);
+  if (!l) {
+    l = createLimiter({ maxConcurrent: config.qbo.maxConcurrent, minGapMs: config.qbo.minRequestGapMs });
+    limiters.set(realmId, l);
+  }
+  return l;
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -46,7 +61,7 @@ async function request(realmId, { path, method = 'GET', query = {}, body, accept
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
     }
 
-    const res = await limit(() =>
+    const res = await limiterFor(realmId)(() =>
       fetch(url, {
         method,
         headers: {
