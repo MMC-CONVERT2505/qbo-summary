@@ -10,13 +10,20 @@ const num = (v) => (v === null || v === undefined ? '—' : count(v));
  * time facts about the file, not scoped to the selected period (unlike the
  * counts/financials sections below it).
  */
-export default function FileProfile({ profile }) {
+export default function FileProfile({ profile, multiCurrency }) {
   if (!profile) return null;
 
   const rows = [
     ['Chart of accounts', num(profile.chartOfAccounts)],
     ['Bank / credit card accounts', `${num(profile.bankAccounts)} / ${num(profile.creditCardAccounts)}`],
-    ['Multi-currency', yesNo(profile.multiCurrency)],
+    [
+      'Multi-currency',
+      // Prefer the authoritative signal (counts.multiCurrency, gated on
+      // Preferences.CurrencyPrefs.MultiCurrencyEnabled) with the real
+      // foreign-currency transaction count alongside it — falls back to
+      // the plain Yes/No file-profile flag only if that lookup didn't run.
+      multiCurrency ? `Yes (${num(multiCurrency.totalForeign)})` : yesNo(profile.multiCurrency),
+    ],
     ['Active employees', num(profile.activeEmployees)],
     ['Attachments', num(profile.attachments)],
     ['Classes / locations', `${num(profile.classes)} / ${num(profile.locations)}`],

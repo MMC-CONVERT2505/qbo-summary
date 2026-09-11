@@ -244,7 +244,7 @@ export default function App() {
               <DataPeriodBanner summary={summary} />
               <Totals summary={summary} />
 
-              <FileProfile profile={summary.fileProfile} />
+              <FileProfile profile={summary.fileProfile} multiCurrency={summary.counts.multiCurrency} />
               <Financials financials={summary.financials} />
               <CountsSection counts={summary.counts} rangeLabel={summary.periods.current.label} />
               <AttachmentsSection attachments={summary.attachments} rangeLabel={summary.periods.current.label} />
