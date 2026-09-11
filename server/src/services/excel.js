@@ -70,7 +70,10 @@ export async function buildExcel(summary) {
         : `${summary.periods.current.start} to ${summary.periods.current.end}`,
     ],
     ...(summary.periods.mode === 'inception'
-      ? [['Data actually starts', summary.periods.current.actualStart ?? 'n/a']]
+      ? [
+          ['Data actually starts', summary.periods.current.actualStart ?? 'n/a'],
+          ['Data actually ends', summary.periods.current.actualEnd ?? 'n/a'],
+        ]
       : []),
     ['List records', summary.counts.totals.listRecords],
     ['Inactive list records', summary.counts.totals.inactiveRecords],

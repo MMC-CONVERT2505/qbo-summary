@@ -27,7 +27,9 @@ function Totals({ summary }) {
         <div className="total__s">
           {summary.counts.transactions.length} types ·{' '}
           {summary.periods.current.actualStart
-            ? `data from ${summary.periods.current.actualStart}`
+            ? `data ${summary.periods.current.actualStart} to ${
+                summary.periods.current.actualEnd ?? summary.periods.current.end
+              }`
             : summary.periods.current.label.toLowerCase()}
         </div>
       </div>
