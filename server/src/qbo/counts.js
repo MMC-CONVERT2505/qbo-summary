@@ -1,6 +1,7 @@
 import { qbo } from './client.js';
 import { LIST_ENTITIES, TRANSACTION_ENTITIES, CHART_BREAKOUTS, countQuery } from './catalog.js';
 import { fetchTransactionTypeCounts, fetchTransactionLineCounts } from './transactionDetail.js';
+import { fetchMultiCurrencyCounts } from './multiCurrency.js';
 import { logger } from '../lib/logger.js';
 
 /** Faults that mean "this feature isn't turned on", not "something broke". */
@@ -152,7 +153,7 @@ export async function fetchCounts(realmId, { range } = {}) {
     });
   }
 
-  const [results, txn, lines] = await Promise.all([
+  const [results, txn, lines, multiCurrency] = await Promise.all([
     qbo.batchQuery(realmId, items),
     // Exact-entry count: QBO's own Journal report, grouped by transaction
     // id — gives the exact number of distinct transactions/entries
@@ -175,6 +176,14 @@ export async function fetchCounts(realmId, { range } = {}) {
     // figure (Excel-only), so a failure here shouldn't sink the summary.
     fetchTransactionLineCounts(realmId, range).catch((err) => {
       logger.warn(`Transaction Detail by Account report failed: ${err.message}`);
+      return null;
+    }),
+    // Foreign-currency transaction counts — null on a non-multi-currency
+    // file (the common case), so this costs nothing for most files. Soft-
+    // fails like the line-count report above: Excel-only, shouldn't sink
+    // the summary.
+    fetchMultiCurrencyCounts(realmId, range).catch((err) => {
+      logger.warn(`Multi-currency count failed: ${err.message}`);
       return null;
     }),
   ]);
@@ -216,11 +225,13 @@ export async function fetchCounts(realmId, { range } = {}) {
     transactionBuckets: txn.buckets,
     transactionLines,
     transactionLineBuckets: lines?.buckets ?? null,
+    multiCurrency,
     totals: {
       listRecords: sum(lists, 'total'),
       inactiveRecords: sum(lists, 'inactive'),
       transactionRecords: txn.totalEntries,
       transactionLines: lines?.totalLines ?? null,
+      foreignCurrencyTransactions: multiCurrency?.totalForeign ?? null,
     },
     queriesIssued: items.length + 2,
   };
