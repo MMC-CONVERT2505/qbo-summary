@@ -99,7 +99,17 @@ export async function buildExcel(summary) {
       ['Chart of accounts', p.chartOfAccounts ?? 'n/a'],
       ['Bank accounts', p.bankAccounts ?? 'n/a'],
       ['Credit card accounts', p.creditCardAccounts ?? 'n/a'],
-      ['Multi-currency', yn(p.multiCurrency)],
+      [
+        'Multi-currency',
+        // Prefer the authoritative signal (Preferences.CurrencyPrefs.
+        // MultiCurrencyEnabled, see multiCurrency.js) with the real
+        // foreign-currency transaction count alongside it, e.g. "Yes (207)"
+        // — falls back to the plain Yes/No file-profile flag only if that
+        // lookup didn't run or failed.
+        summary.counts.multiCurrency
+          ? `Yes (${summary.counts.multiCurrency.totalForeign})`
+          : yn(p.multiCurrency),
+      ],
       ['Active employees', p.activeEmployees ?? 'n/a'],
       ['Attachments', p.attachments ?? 'n/a'],
       ['Classes', p.classes ?? 'n/a'],
@@ -203,48 +213,6 @@ export async function buildExcel(summary) {
         note: t.status === 'ok' ? '' : (t.note ?? t.status),
       }))
     );
-  }
-
-  /* ---- Multi-currency ----
-     Skipped entirely on a file that doesn't use multi-currency (the common
-     case) — nothing to show, and the underlying fetch already skipped the
-     expensive per-type paging for exactly that reason. */
-  if (summary.counts.multiCurrency) {
-    const mc = summary.counts.multiCurrency;
-
-    const mcSheet = wb.addWorksheet('Multi-currency');
-    mcSheet.columns = [{ width: 30 }, { width: 20 }];
-    const mcStatRows = [
-      ['Home currency', mc.homeCurrency ?? 'n/a'],
-      [`Foreign-currency transactions (${summary.periods.current.label})`, mc.totalForeign],
-      [`Total transactions checked (${summary.periods.current.label})`, mc.totalTxns],
-    ];
-    mcStatRows.forEach(([k, v]) => {
-      const row = mcSheet.addRow([k, v]);
-      row.getCell(1).font = { bold: true };
-      if (typeof v === 'number') row.getCell(2).numFmt = whole;
-    });
-    mcSheet.addRow([]);
-
-    // Only the types that actually have a foreign-currency transaction —
-    // most files touch a dozen+ transaction types but only a handful ever
-    // see a foreign currency; listing every type at 0 here is just noise
-    // (unlike the Transactions sheet, where 0 itself is the useful fact).
-    const perTypeStart = mcSheet.rowCount + 1;
-    const hdrRow = mcSheet.addRow(['Transaction type', 'Total', 'Foreign-currency', 'By currency']);
-    styleHeader(hdrRow);
-    mcSheet.getColumn(2).width = 12;
-    mcSheet.getColumn(3).width = 16;
-    mcSheet.getColumn(4).width = 34;
-    for (const t of (mc.byType ?? []).filter((t) => t.foreign > 0)) {
-      const byCurrency = Object.entries(t.byCurrency)
-        .map(([code, n]) => `${code}: ${n}`)
-        .join(', ');
-      const row = mcSheet.addRow([t.label, t.total, t.foreign, byCurrency]);
-      row.getCell(2).numFmt = whole;
-      row.getCell(3).numFmt = whole;
-    }
-    bandRows(mcSheet, perTypeStart + 1);
   }
 
   /* ---- Attachments ---- */
