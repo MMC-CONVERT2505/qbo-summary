@@ -479,6 +479,8 @@ table.ledger tbody tr.is-muted td { color: var(--faint); font-style: italic; }
 
 /* ---------- results totals ---------- */
 
+.data-period { font-family: var(--display); font-size: 19px; color: var(--ink); margin: -8px 0 26px; }
+.data-period b { color: var(--petrol); font-weight: 600; }
 .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 46px; }
 .total { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 20px 22px 19px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
 .total::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--petrol); }

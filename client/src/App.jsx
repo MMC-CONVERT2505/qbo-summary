@@ -10,6 +10,23 @@ import FileProfile from './components/FileProfile.jsx';
 import { CountsSection, AttachmentsSection } from './components/Counts.jsx';
 import Odometer from './components/Odometer.jsx';
 
+// Shown on every mode, not just "Since inception" — but actualStart/
+// actualEnd only ever get looked up (transactionDateRange.js) for
+// inception, since that mode's own query range is a fixed 1990-01-01
+// floor through today, deliberately not a real date (see periods.js), so
+// it needs the real span looked up separately for display. Every other
+// mode (YTD, custom, 1Y+YTD) already has a real, meaningful start/end —
+// the user picked it themselves — so those are used directly as the
+// fallback, no extra lookup needed.
+function DataPeriodBanner({ summary }) {
+  const { actualStart, actualEnd, start, end } = summary.periods.current;
+  return (
+    <div className="data-period">
+      Data period: <b>{actualStart ?? start}</b> – <b>{actualEnd ?? end}</b>
+    </div>
+  );
+}
+
 function Totals({ summary }) {
   const c = summary.counts.totals;
   const mb = summary.attachments?.totalBytes ? (summary.attachments.totalBytes / 1048576).toFixed(1) : null;
@@ -25,12 +42,7 @@ function Totals({ summary }) {
         <div className="total__k">Transactions</div>
         <Odometer value={c.transactionRecords} />
         <div className="total__s">
-          {summary.counts.transactions.length} types ·{' '}
-          {summary.periods.current.actualStart
-            ? `data ${summary.periods.current.actualStart} to ${
-                summary.periods.current.actualEnd ?? summary.periods.current.end
-              }`
-            : summary.periods.current.label.toLowerCase()}
+          {summary.counts.transactions.length} types · {summary.periods.current.label.toLowerCase()}
         </div>
       </div>
       {c.transactionLines !== null && (
@@ -229,6 +241,7 @@ export default function App() {
 
           {summary && (
             <>
+              <DataPeriodBanner summary={summary} />
               <Totals summary={summary} />
 
               <FileProfile profile={summary.fileProfile} />

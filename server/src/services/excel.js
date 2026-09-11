@@ -226,13 +226,17 @@ export async function buildExcel(summary) {
     });
     mcSheet.addRow([]);
 
+    // Only the types that actually have a foreign-currency transaction —
+    // most files touch a dozen+ transaction types but only a handful ever
+    // see a foreign currency; listing every type at 0 here is just noise
+    // (unlike the Transactions sheet, where 0 itself is the useful fact).
     const perTypeStart = mcSheet.rowCount + 1;
     const hdrRow = mcSheet.addRow(['Transaction type', 'Total', 'Foreign-currency', 'By currency']);
     styleHeader(hdrRow);
     mcSheet.getColumn(2).width = 12;
     mcSheet.getColumn(3).width = 16;
     mcSheet.getColumn(4).width = 34;
-    for (const t of mc.byType ?? []) {
+    for (const t of (mc.byType ?? []).filter((t) => t.foreign > 0)) {
       const byCurrency = Object.entries(t.byCurrency)
         .map(([code, n]) => `${code}: ${n}`)
         .join(', ');
