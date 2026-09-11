@@ -34,6 +34,16 @@ export function percent(value, { signed = true, decimals = 1 } = {}) {
   return `${sign}${value.toFixed(decimals)}%`;
 }
 
+/** ISO 'YYYY-MM-DD' -> 'DD/MM/YY'. Plain string split — these are already
+ * date-only strings (query params, not timestamps), so no timezone risk
+ * the way `new Date(iso)` would have. */
+export function ddmmyy(iso) {
+  if (!iso) return DASH;
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 export function dateLabel(iso) {
   if (!iso) return DASH;
   return new Date(iso).toLocaleDateString(undefined, {

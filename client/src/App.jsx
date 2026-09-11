@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './lib/api.js';
-import { count, figClass } from './lib/format.js';
+import { count, figClass, ddmmyy } from './lib/format.js';
 import AppBar from './components/AppBar.jsx';
 import ConnectScreen from './components/ConnectScreen.jsx';
 import PeriodScreen from './components/PeriodScreen.jsx';
@@ -22,7 +22,7 @@ function DataPeriodBanner({ summary }) {
   const { actualStart, actualEnd, start, end } = summary.periods.current;
   return (
     <div className="data-period">
-      Data period: <b>{actualStart ?? start}</b> – <b>{actualEnd ?? end}</b>
+      Data period: <b>{ddmmyy(actualStart ?? start)}</b> – <b>{ddmmyy(actualEnd ?? end)}</b>
     </div>
   );
 }
