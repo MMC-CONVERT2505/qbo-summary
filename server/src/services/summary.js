@@ -69,16 +69,15 @@ async function buildSummary(
   onProgress({ stage: 'counts', message: 'Counting lists and transactions' });
   const [counts, dataRange] = await Promise.all([
     fetchCounts(realmId, { range: periods.current }),
-    // Only meaningful for "Since inception" — every other mode already has
-    // an explicit chosen start (and end) date, so there's nothing to look
-    // up. Soft-fails to null: this is a display nicety, not worth sinking
-    // the build.
-    periods.mode === 'inception'
-      ? fetchTransactionDateRange(realmId).catch((err) => {
-          logger.warn(`Transaction date range lookup failed: ${err.message}`);
-          return null;
-        })
-      : Promise.resolve(null),
+    // Runs for every mode, not just "Since inception" — a selected range's
+    // own start/end are the window asked for, not proof anything actually
+    // happened right on those exact days (see transactionDateRange.js).
+    // Soft-fails to null: this is a display nicety, not worth sinking the
+    // build.
+    fetchTransactionDateRange(realmId, periods.current).catch((err) => {
+      logger.warn(`Transaction date range lookup failed: ${err.message}`);
+      return null;
+    }),
   ]);
   if (dataRange?.earliest) periods.current.actualStart = dataRange.earliest;
   // The file may be dormant — "Since inception" always queries through

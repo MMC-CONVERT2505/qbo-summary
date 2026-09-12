@@ -7,9 +7,17 @@ import { logger } from '../lib/logger.js';
 // doesn't matter here; querying it 3 times would just waste a call.
 const ENTITIES = [...new Set(TRANSACTION_ENTITIES.map((s) => s.entity))];
 
-async function extremeDate(realmId, entity, direction) {
+async function extremeDate(realmId, entity, direction, range) {
+  const clauses = [];
+  if (range?.start) clauses.push(`TxnDate >= '${range.start}'`);
+  if (range?.end) clauses.push(`TxnDate <= '${range.end}'`);
+  const where = clauses.length ? ` where ${clauses.join(' and ')}` : '';
+
   try {
-    const res = await qbo.query(realmId, `select TxnDate from ${entity} orderby TxnDate ${direction} maxresults 1`);
+    const res = await qbo.query(
+      realmId,
+      `select TxnDate from ${entity}${where} orderby TxnDate ${direction} maxresults 1`
+    );
     return res?.[entity]?.[0]?.TxnDate ?? null;
   } catch (err) {
     // An entity that's off for this company (e.g. Transfer never used)
@@ -20,24 +28,27 @@ async function extremeDate(realmId, entity, direction) {
 }
 
 /**
- * The real first AND last transaction dates in the file, across every
- * transaction type. "Since inception" mode itself deliberately does NOT use
- * either of these for its own query range — it queries from a fixed
- * 1990-01-01 floor through today instead (see periods.js), so a converted
- * file's real history can never fall outside the range even if this lookup
- * or QBO's own stated company-start-date is wrong. This is purely for
- * display: "Since inception (through today)" doesn't tell you the file's
- * real first transaction, and — just as easily missed — doesn't tell you
- * the file might be dormant, with its real last transaction months back.
+ * The real first AND last transaction dates within `range`, across every
+ * transaction type — not just the range's own stated boundaries.
+ *
+ * Matters for every mode, not only "Since inception": a selected range's
+ * start/end are the window you asked for, not proof anything actually
+ * happened right on those exact days. "Since inception" has the most
+ * extreme case (a fixed 1990-01-01 floor, deliberately not a real date —
+ * see periods.js, so a converted file's real history can never fall
+ * outside it even if this lookup or QBO's own stated company-start-date
+ * is wrong), but the same idea applies to a YTD or custom range that
+ * starts before the file's real first transaction in that window, or ends
+ * after its last one (a dormant stretch).
  *
  * Both directions run together in one batch of parallel calls (28 for a
  * 14-entity file: earliest + latest per entity), not as two separate
  * sequential passes.
  */
-export async function fetchTransactionDateRange(realmId) {
+export async function fetchTransactionDateRange(realmId, range) {
   const [earliestByEntity, latestByEntity] = await Promise.all([
-    Promise.all(ENTITIES.map((entity) => extremeDate(realmId, entity, 'asc'))),
-    Promise.all(ENTITIES.map((entity) => extremeDate(realmId, entity, 'desc'))),
+    Promise.all(ENTITIES.map((entity) => extremeDate(realmId, entity, 'asc', range))),
+    Promise.all(ENTITIES.map((entity) => extremeDate(realmId, entity, 'desc', range))),
   ]);
 
   const earliest = earliestByEntity.filter(Boolean).sort();
